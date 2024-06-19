@@ -4,6 +4,7 @@ from datetime import datetime, timedelta
 import time
 import threading
 import random
+import serial
 
 app = Flask(__name__)
 CORS(app)  # Allow all CORS requests
@@ -12,6 +13,32 @@ received_data = None
 target_time = None
 data_ready = threading.Event()
 current_problem = None
+
+# Configure the serial port (update port and baudrate as necessary)
+ser = serial.Serial(
+    port='/dev/ttyUSB0',  # Update with your serial port name
+    baudrate=9600,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE,
+    bytesize=serial.EIGHTBITS,
+    timeout=1
+)
+
+def send_bit(bit):
+    if bit not in [0, 1]:
+        raise ValueError("Bit must be 0 or 1")
+
+    # Transmit start bit (0)
+    ser.write(b'\x00')
+    time.sleep(1 / 9600)  # Wait for 1 bit time
+    
+    # Transmit data bit
+    ser.write(bytes([bit]))
+    time.sleep(1 / 9600)  # Wait for 1 bit time
+
+    # Transmit stop bit (1)
+    ser.write(b'\x01')
+    time.sleep(1 / 9600)  # Wait for 1 bit time
 
 def generate_math_problem():
     a = random.randint(1, 10)
@@ -42,7 +69,8 @@ def wait_and_process(wait_time):
     time.sleep(wait_time)
     problem, solution = generate_math_problem()
     current_problem = (problem, solution)
-    # Send bit to FPGA to control buzzer (implement this based on your FPGA communication setup)
+    # Send bit to FPGA to control buzzer (start buzzer)
+    send_bit(1)
     data_ready.set()
 
 @app.route('/get_problem', methods=['GET'])
@@ -56,7 +84,8 @@ def check_answer():
     data = request.json
     answer = int(data['answer'])
     if answer == current_problem[1]:
-        # Stop FPGA buzzer (implement this based on your FPGA communication setup)
+        # Stop FPGA buzzer
+        send_bit(0)
         return jsonify({"correct": True})
     else:
         problem, solution = generate_math_problem()

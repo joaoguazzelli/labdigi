@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Wait Timer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        h1 {
+            margin-top: 0;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 8px;
+            box-sizing: border-box;
+        }
+        button {
+            padding: 10px 15px;
+            background: #5cb85c;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #ccc;
+        }
+        .result, .math-problem, .answer-group {
+            margin-top: 20px;
+            padding: 10px;
+            background: #dff0d8;
+            color: #3c763d;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Wait Timer</h1>
+        <div class="form-group">
+            <label for="time">Time (HH:MM):</label>
+            <input type="time" id="time" name="time" required>
+        </div>
+        <div class="form-group">
+            <label for="data">Data to Display:</label>
+            <input type="text" id="data" name="data" required>
+        </div>
+        <button onclick="startTimer()">Start Timer</button>
+        <div id="result" class="result" style="display:none;"></div>
+        <div id="math-problem" class="math-problem" style="display:none;"></div>
+        <div class="answer-group" style="display:none;">
+            <input type="text" id="answer" name="answer">
+            <button onclick="submitAnswer()">Submit Answer</button>
+        </div>
+    </div>
+
+    <script>
+        function startTimer() {
+            const time = document.getElementById('time').value;
+            const data = document.getElementById('data').value;
+
+            fetch('http://127.0.0.1:5000/set_time', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ time: time, data: data }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                console.log('Timer started:', data);
+                document.getElementById('result').style.display = 'none';
+                document.getElementById('math-problem').style.display = 'none';
+                document.querySelector('.answer-group').style.display = 'none';
+                setTimeout(getProblem, data.wait_time_seconds * 1000);
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        function getProblem() {
+            fetch('http://127.0.0.1:5000/get_problem')
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('math-problem').innerText = `Solve this problem: ${data.problem}`;
+                document.getElementById('math-problem').style.display = 'block';
+                document.querySelector('.answer-group').style.display = 'block';
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+
+        function submitAnswer() {
+            const answer = document.getElementById('answer').value;
+            fetch('http://127.0.0.1:5000/check_answer', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ answer: answer }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.correct) {
+                    document.getElementById('result').innerText = 'Correct answer! Buzzer stopped.';
+                    document.getElementById('result').style.display = 'block';
+                    document.getElementById('math-problem').style.display = 'none';
+                    document.querySelector('.answer-group').style.display = 'none';
+                } else {
+                    document.getElementById('result').innerText = 'Incorrect answer. Try again.';
+                    document.getElementById('result').style.display = 'block';
+                    getProblem();
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

@@ -16,7 +16,7 @@ current_problem = None
 
 # Configure the serial port (update port and baudrate as necessary)
 ser = serial.Serial(
-    port='/dev/ttyUSB0',  # Update with your serial port name
+    port='/dev/ttyV0',  # Update with your serial port name
     baudrate=9600,
     parity=serial.PARITY_NONE,
     stopbits=serial.STOPBITS_ONE,
